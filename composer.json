@@ -1,0 +1,16 @@
+{
+    "name": "jwp/example-app",
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../jwp-php-client"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "slim/slim": "^4.4",
+        "http-interop/http-factory-guzzle": "^1.0",
+        "jwp/php-client": "*",
+        "slim/psr7": "dev-master"
+    }
+}
