@@ -11,13 +11,13 @@ $app = AppFactory::create();
 // Add error middleware
 $app->addErrorMiddleware(true, true, true);
 
-define('JWP_USERNAME', 'dev@dev.dev');
+define('JWP_APP_ID', 'b4157e65-be69-45df-9b77-3ac2361c53d9');
 define('JWP_PASSWORD', '$dev2020');
 
 
 // Add routes
 $app->get('/', function (Request $request, Response $response) {
-    $jwp = new Jwp\Client(JWP_USERNAME, JWP_PASSWORD);
+    $jwp = new Jwp\Client(JWP_APP_ID, JWP_PASSWORD);
     $userID = uniqid();
     $connParams = json_encode($jwp->connect($userID, ['channels' =>  ['general']]));
 
@@ -47,7 +47,7 @@ $app->post('/chat', function (Request $request, Response $response, $args) {
     $contents = json_decode(file_get_contents('php://input'), true);
     $message = $contents['message'];
     $request =  $request->withParsedBody($contents);
-    $jwp = new Jwp\Client(JWP_USERNAME, JWP_PASSWORD);
+    $jwp = new Jwp\Client(JWP_APP_ID, JWP_PASSWORD);
     $jwp->push('general', 'chat_msg', ['message' => $message]);
     $response = $response->withHeader('Content-type', 'application/json');
     $response->getBody()->write(json_encode(['status' => 'ok']));
