@@ -40,8 +40,8 @@ $app->get('/{usename}/{stealth}', function (Request $request, Response $response
             'general' => [
                 'presence_track' => !$stealth,
                 'presence_diffs' => true,
-                'webhook_join' => true,
-                'webhook_leave' => true,
+                'notify_joins' => true,
+                'notify_leaves' => true,
                 'meta' => ['username' => $username]
             ]
         ]
