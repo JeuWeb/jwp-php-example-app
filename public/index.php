@@ -38,15 +38,10 @@ $app->get('/{usename}/{stealth}', function (Request $request, Response $response
     $jwp = getJwpClient();
     $channelMeta = ['username' => $username];
     $channelOptions = [
-        // 'presence_track' => !$stealth,
-        // 'presence_diffs' => true,
-        // 'notify_joins' => true,
-        // 'notify_leaves' => true,
-
-        'presence_track' => false,
-        'presence_diffs' => false,
-        'notify_joins' => false,
-        'notify_leaves' => false,
+        'presence_track' => !$stealth,
+        'presence_diffs' => true,
+        'notify_joins' => true,
+        'notify_leaves' => true,
     ];
 
     $socketToken = $jwp->authenticateSocket($socketID, 1000);
