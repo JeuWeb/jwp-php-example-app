@@ -14,12 +14,13 @@ $app->addErrorMiddleware(true, true, true);
 
 define('JWP_APP_ID', 'dev');
 define('JWP_API_KEY', 'meXxp1xABjiy5skBF9ecnwDBePPqMeIL80hBgHaiHT54yroKKyVZFffb459jLFyi');
+define('JWP_SECRET', '9rpajQOrCCdZrVY80uOtU');
 
 
 
 function getJwpClient()
 {
-    $auth = new Jwp\Auth(JWP_APP_ID, JWP_API_KEY);
+    $auth = new Jwp\Auth(JWP_APP_ID, JWP_API_KEY, JWP_SECRET);
     return new Jwp\Client($auth);
 }
 
@@ -32,20 +33,28 @@ $app->get('/', function (Request $request, Response $response) {
 
 $app->get('/{usename}/{stealth}', function (Request $request, Response $response, $args) {
     $username = $args['usename'];
+    $socketID = $username;
     $stealth = $args['stealth'] === '1';
     $jwp = getJwpClient();
-    $connParams = json_encode($jwp->connect([
-        'socket_id' => $username,
-        'channels' =>  [
-            'general' => [
-                'presence_track' => !$stealth,
-                'presence_diffs' => true,
-                'notify_joins' => true,
-                'notify_leaves' => true,
-                'meta' => ['username' => $username]
-            ]
-        ]
-    ]));
+    $channelMeta = ['username' => $username];
+    $channelOptions = [
+        // 'presence_track' => !$stealth,
+        // 'presence_diffs' => true,
+        // 'notify_joins' => true,
+        // 'notify_leaves' => true,
+
+        'presence_track' => false,
+        'presence_diffs' => false,
+        'notify_joins' => false,
+        'notify_leaves' => false,
+    ];
+
+    $socketToken = $jwp->authenticateSocket($socketID, 1000);
+    $socketParams = json_encode([
+        'auth' => $socketToken,
+        'app_id' => 'dev'
+    ]);
+    $channParams = json_encode($jwp->authenticateChannel($socketID, 'general', $channelMeta, $channelOptions));
 
     $html = <<<HTML
         <!DOCTYPE html>
@@ -59,7 +68,8 @@ $app->get('/{usename}/{stealth}', function (Request $request, Response $response
             <button id="msg-send">Send</button>
         </div>
         <script>
-            window.jwpParams = $connParams;
+            window.jwpSocketParams = $socketParams;
+            window.jwpChannelParams = $channParams;
         </script>
         <script src="/jwp-js/jwp.umd.js"></script>
         <script src="/main.js"></script>
