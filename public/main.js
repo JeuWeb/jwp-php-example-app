@@ -33,7 +33,7 @@ function sendMessage() {
   bodyInput.value = ''
   var headers = new Headers();
   headers.append('content-type', 'application/json');
-  fetch('/' + window.jwpChannelName + '/chat', {
+  fetch('/send/' + window.jwpChannelName, {
     method: 'POST',
     headers: headers,
     body: JSON.stringify({ message: msg }),

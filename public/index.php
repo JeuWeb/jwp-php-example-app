@@ -17,7 +17,6 @@ define('JWP_API_KEY', 'meXxp1xABjiy5skBF9ecnwDBePPqMeIL80hBgHaiHT54yroKKyVZFffb4
 define('JWP_SECRET', '9rpajQOrCCdZrVY80uOtU');
 
 
-
 function getJwpClient()
 {
     $auth = new Jwp\Auth(JWP_APP_ID, JWP_API_KEY, JWP_SECRET);
@@ -27,30 +26,13 @@ function getJwpClient()
 // Add routes
 $app->get('/', function (Request $request, Response $response) {
     return $response
-        ->withHeader('Location', '/general/' . uniqid() . '/0')
+        ->withHeader('Location', '/room/general/' . uniqid())
         ->withStatus(302);
 });
 
-$app->get('/{room}/{username}/{stealth}', function (Request $request, Response $response, $args) {
+$app->get('/room/{room}/{username}', function (Request $request, Response $response, $args) {
     $username = $args['username'];
     $room = $args['room'];
-    $socketID = $username;
-    $stealth = $args['stealth'] === '1';
-    $jwp = getJwpClient();
-    $channelMeta = ['username' => $username];
-    $channelOptions = [
-        'presence_track' => !$stealth,
-        'presence_diffs' => true,
-        'notify_joins' => true,
-        'notify_leaves' => true,
-    ];
-
-    $socketToken = $jwp->authenticateSocket($socketID, 60);
-    $socketParams = json_encode([
-        'auth' => $socketToken,
-        'app_id' => 'dev'
-    ]);
-    $channParams = json_encode($jwp->authenticateChannel($socketID, $room, $channelMeta, $channelOptions));
 
     $html = <<<HTML
         <!DOCTYPE html>
@@ -63,12 +45,12 @@ $app->get('/{room}/{username}/{stealth}', function (Request $request, Response $
             <input type="text" id="msg-body" value="Hello !" />
             <button id="msg-send">Send</button>
         </div>
+        <script src="/jwp-js/jwp.umd.js"></script>
         <script>
-            window.jwpSocketParams = $socketParams;
-            window.jwpChannelParams = $channParams;
+            window.jwpSocketParams = jwp.fetchParams('/auth/$username');
+            window.jwpChannelParams = jwp.fetchParams('/auth/$username');
             window.jwpChannelName = '$room';
         </script>
-        <script src="/jwp-js/jwp.umd.js"></script>
         <script src="/main.js"></script>
 HTML;
 
@@ -76,7 +58,7 @@ HTML;
     return $response;
 });
 
-$app->post('/{room}/chat', function (Request $request, Response $response, $args) {
+$app->post('/send/{room}', function (Request $request, Response $response, $args) {
     $room = $args['room'];
     $contents = json_decode(file_get_contents('php://input'), true);
     $message = $contents['message'];
@@ -85,6 +67,46 @@ $app->post('/{room}/chat', function (Request $request, Response $response, $args
     $jwp->push($room, 'chat_msg', ['message' => $message]);
     $response = $response->withHeader('Content-type', 'application/json');
     $response->getBody()->write(json_encode(['status' => 'ok']));
+    return $response;
+});
+
+$app->post('/auth/{username}', function (Request $request, Response $response, $args) {
+    $username = $args['username'];
+    $contents = json_decode(file_get_contents('php://input'), true);
+    $socketID = $username;
+    $jwp = getJwpClient();
+    $channelOptions = [
+        'presence_track' => true,
+        'presence_diffs' => true,
+        'notify_joins' => true,
+        'notify_leaves' => true,
+    ];
+
+    try {
+        switch ($contents['auth_type']) {
+            case 'channel':
+                $channelMeta = ['username' => $username];
+                $channel = $contents['channel_name'];
+                $data =
+                    $data = ['status' => 'ok', 'data' => $jwp->authenticateChannel($socketID, $channel, $channelMeta, $channelOptions)];
+                break;
+
+            case 'socket':
+                $socketToken = $jwp->authenticateSocket($socketID, 60);
+                $data = ['status' => 'ok', 'data' => ['auth' => $socketToken, 'app_id' => 'dev']];
+                break;
+
+            default:
+                throw new \Exception("Incorrect auth type");
+                # code...
+                break;
+        }
+    } catch (\Exception $e) {
+        $data = ['status' => 'error', 'error' => $e->getMessage()];
+    }
+
+    $response = $response->withHeader('Content-type', 'application/json');
+    $response->getBody()->write(json_encode($data));
     return $response;
 });
 
