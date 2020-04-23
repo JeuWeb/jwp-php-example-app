@@ -1,6 +1,9 @@
 console.log(`window.jwpSocketParams`, window.jwpSocketParams)
 console.log(`window.jwpChannelParams`, window.jwpChannelParams)
-var socket = jwp.connect(window.jwpSocketParams)
+console.log(`window.jwpChannelName`, window.jwpChannelName)
+jwp.enableDebug()
+var room = window.jwpChannelName
+var socket = jwp.connect('ws://localhost:4000/socket', window.jwpSocketParams)
 
 socket.onMessage(function (msg) {
   if (msg.event === 'jwp_system' && msg.payload.type === 'error') {
@@ -8,7 +11,7 @@ socket.onMessage(function (msg) {
   }
 })
 
-var channel = socket.channel('general', window.jwpChannelParams)
+var channel = socket.channel(room, window.jwpChannelParams)
 
 channel.join()
   .receive('error', function (err) {
@@ -30,13 +33,14 @@ function sendMessage() {
   bodyInput.value = ''
   var headers = new Headers();
   headers.append('content-type', 'application/json');
-  fetch('/chat', {
+  fetch('/' + window.jwpChannelName + '/chat', {
     method: 'POST',
     headers: headers,
     body: JSON.stringify({ message: msg }),
   })
     .then(function (response) { return response.json() })
     .then(function (data) { console.log(`data`, data) })
+    .catch(err => { console.error(err) })
 }
 
 bodyInput.addEventListener('keypress', function (evt) {

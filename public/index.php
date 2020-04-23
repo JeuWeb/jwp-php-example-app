@@ -27,12 +27,13 @@ function getJwpClient()
 // Add routes
 $app->get('/', function (Request $request, Response $response) {
     return $response
-        ->withHeader('Location', '/' . uniqid() . '/0')
+        ->withHeader('Location', '/general/' . uniqid() . '/0')
         ->withStatus(302);
 });
 
-$app->get('/{usename}/{stealth}', function (Request $request, Response $response, $args) {
-    $username = $args['usename'];
+$app->get('/{room}/{username}/{stealth}', function (Request $request, Response $response, $args) {
+    $username = $args['username'];
+    $room = $args['room'];
     $socketID = $username;
     $stealth = $args['stealth'] === '1';
     $jwp = getJwpClient();
@@ -44,12 +45,12 @@ $app->get('/{usename}/{stealth}', function (Request $request, Response $response
         'notify_leaves' => true,
     ];
 
-    $socketToken = $jwp->authenticateSocket($socketID, 1000);
+    $socketToken = $jwp->authenticateSocket($socketID, 60);
     $socketParams = json_encode([
         'auth' => $socketToken,
         'app_id' => 'dev'
     ]);
-    $channParams = json_encode($jwp->authenticateChannel($socketID, 'general', $channelMeta, $channelOptions));
+    $channParams = json_encode($jwp->authenticateChannel($socketID, $room, $channelMeta, $channelOptions));
 
     $html = <<<HTML
         <!DOCTYPE html>
@@ -65,6 +66,7 @@ $app->get('/{usename}/{stealth}', function (Request $request, Response $response
         <script>
             window.jwpSocketParams = $socketParams;
             window.jwpChannelParams = $channParams;
+            window.jwpChannelName = '$room';
         </script>
         <script src="/jwp-js/jwp.umd.js"></script>
         <script src="/main.js"></script>
@@ -74,12 +76,13 @@ HTML;
     return $response;
 });
 
-$app->post('/chat', function (Request $request, Response $response, $args) {
+$app->post('/{room}/chat', function (Request $request, Response $response, $args) {
+    $room = $args['room'];
     $contents = json_decode(file_get_contents('php://input'), true);
     $message = $contents['message'];
     $request =  $request->withParsedBody($contents);
     $jwp = getJwpClient();
-    $jwp->push('general', 'chat_msg', ['message' => $message]);
+    $jwp->push($room, 'chat_msg', ['message' => $message]);
     $response = $response->withHeader('Content-type', 'application/json');
     $response->getBody()->write(json_encode(['status' => 'ok']));
     return $response;
