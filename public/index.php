@@ -38,7 +38,7 @@ $app->get('/room/{room}/{username}', function (Request $request, Response $respo
         <!DOCTYPE html>
         <title>Example App</title>
         <meta charset="utf-8" />
-        <link rel="stylesheet" href="/main.css" /> 
+        <link rel="stylesheet" href="/main.css" />
         <div class="container">
             <h2>Chat example</h2>
             <div id="messages-list"></div>
@@ -84,16 +84,25 @@ $app->post('/auth/{username}', function (Request $request, Response $response, $
 
     try {
         switch ($contents['auth_type']) {
+            case 'socket':
+                $socketToken = $jwp->authenticateSocket($socketID, 60);
+                $data = [
+                    'status' => 'ok',
+                    'data' => [
+                        'auth' => $socketToken,
+                        'app_id' => 'dev'
+                    ]
+                ];
+                break;
+
             case 'channel':
                 $channelMeta = ['username' => $username];
                 $channel = $contents['channel_name'];
                 $data =
-                    $data = ['status' => 'ok', 'data' => $jwp->authenticateChannel($socketID, $channel, $channelMeta, $channelOptions)];
-                break;
-
-            case 'socket':
-                $socketToken = $jwp->authenticateSocket($socketID, 60);
-                $data = ['status' => 'ok', 'data' => ['auth' => $socketToken, 'app_id' => 'dev']];
+                    $data = [
+                        'status' => 'ok',
+                        'data' => $jwp->authenticateChannel($socketID, $channel, $channelMeta, $channelOptions)
+                    ];
                 break;
 
             default:
