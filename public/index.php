@@ -23,6 +23,21 @@ function getJwpClient()
     return new Jwp\Client($auth);
 }
 
+function jsonResponse(Response $response, $data = null)
+{
+    if ($data instanceof \Exception) {
+        $payload = ['status' => 'error', 'error' => $data->getMessage()];
+        $response = $response->withStatus(400);
+    } else if (null === $data) {
+        $payload = ['status' => 'ok'];
+    } else {
+        $payload = ['status' => 'ok', 'data' => $data];
+    }
+    $response = $response->withHeader('Content-type', 'application/json');
+    $response->getBody()->write(json_encode($payload));
+    return $response;
+}
+
 // Add routes
 $app->get('/', function (Request $request, Response $response) {
     return $response
@@ -45,9 +60,9 @@ $app->get('/room/{room}/{username}', function (Request $request, Response $respo
             <input type="text" id="msg-body" value="Hello !" />
             <button id="msg-send">Send</button>
         </div>
-        <script src="/jwp-js/jwp.umd.js"></script>
+        <script src="/jwp-js/jwp.js"></script>
         <script>
-            window.jwpSocketParams = jwp.fetchParams('/auth/$username');
+            window.jwpSocketParams = jwp.xhrParams('/auth/$username');
             window.jwpChannelParams = jwp.fetchParams('/auth/$username');
             window.jwpChannelName = '$room';
         </script>
@@ -65,9 +80,7 @@ $app->post('/send/{room}', function (Request $request, Response $response, $args
     $request =  $request->withParsedBody($contents);
     $jwp = getJwpClient();
     $jwp->push($room, 'chat_msg', ['message' => $message]);
-    $response = $response->withHeader('Content-type', 'application/json');
-    $response->getBody()->write(json_encode(['status' => 'ok']));
-    return $response;
+    return jsonResponse($response);
 });
 
 $app->post('/auth/{username}', function (Request $request, Response $response, $args) {
@@ -86,36 +99,28 @@ $app->post('/auth/{username}', function (Request $request, Response $response, $
         switch ($contents['auth_type']) {
             case 'socket':
                 $socketToken = $jwp->authenticateSocket($socketID, 60);
-                $data = [
-                    'status' => 'ok',
-                    'data' => [
-                        'auth' => $socketToken,
-                        'app_id' => 'dev'
-                    ]
-                ];
-                break;
+                return jsonResponse($response, [
+                    'auth' => $socketToken,
+                    'app_id' => 'dev'
+                ]);
 
             case 'channel':
                 $channelMeta = ['username' => $username];
                 $channel = $contents['channel_name'];
-                $data =
-                    $data = [
-                        'status' => 'ok',
-                        'data' => $jwp->authenticateChannel($socketID, $channel, $channelMeta, $channelOptions)
-                    ];
+                return jsonResponse($response, $jwp->authenticateChannel($socketID, $channel, $channelMeta, $channelOptions));
                 break;
 
             default:
                 throw new \Exception("Incorrect auth type");
-                # code...
-                break;
         }
     } catch (\Exception $e) {
-        $data = ['status' => 'error', 'error' => $e->getMessage()];
+        return jsonResponse($response, $e);
     }
+});
 
-    $response = $response->withHeader('Content-type', 'application/json');
-    $response->getBody()->write(json_encode($data));
+$app->post('/webhook', function (Request $request, Response $response, $args) {
+    $contents = json_decode(file_get_contents('php://input'), true);
+    error_log("Received webhook: " . print_r($contents, true));
     return $response;
 });
 
