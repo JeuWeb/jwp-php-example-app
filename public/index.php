@@ -12,7 +12,7 @@ $app = AppFactory::create();
 // Add error middleware
 $app->addErrorMiddleware(true, true, true);
 
-define('JWP_APP_ID', 'dev');
+define('JWP_APP_ID', '0000000dev');
 define('JWP_API_KEY', 'meXxp1xABjiy5skBF9ecnwDBePPqMeIL80hBgHaiHT54yroKKyVZFffb459jLFyi');
 define('JWP_SECRET', '9rpajQOrCCdZrVY80uOtU');
 
@@ -101,7 +101,7 @@ $app->post('/auth/{username}', function (Request $request, Response $response, $
                 $socketToken = $jwp->authenticateSocket($socketID, 60);
                 return jsonResponse($response, [
                     'auth' => $socketToken,
-                    'app_id' => 'dev'
+                    'app_id' => JWP_APP_ID
                 ]);
 
             case 'channel':

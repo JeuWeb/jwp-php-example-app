@@ -8,15 +8,21 @@ var socket = jwp.connect('ws://localhost:4000/socket', window.jwpSocketParams)
 socket.onMessage(function (msg) {
   if (msg.event === 'jwp_system' && msg.payload.type === 'error') {
     console.error('jwp system error: ', msg.payload.message)
+  } else {
+    console.log(`msg`, msg)
   }
 })
 
 var channel = socket.channel(room, window.jwpChannelParams)
 
+
 channel.join()
   .receive('error', function (err) {
     console.error(err)
   })
+  .receive('ok', _ => sendMessage("hello"))
+
+console.log(`called join`)
 
 var bodyInput = document.getElementById('msg-body')
 var sendButton = document.getElementById('msg-send')
@@ -28,9 +34,13 @@ channel.on('chat_msg', function (data) {
   messagesList.appendChild(p)
 })
 
-function sendMessage() {
+function sendInput() {
   var msg = bodyInput.value
   bodyInput.value = ''
+  sendMessage(msg)
+}
+
+function sendMessage(msg) {
   var headers = new Headers();
   headers.append('content-type', 'application/json');
   fetch('/send/' + window.jwpChannelName, {
@@ -45,11 +55,11 @@ function sendMessage() {
 
 bodyInput.addEventListener('keypress', function (evt) {
   if (evt.key === 'Enter' || evt.code === 'Enter' || evt.which === 13 || evt.which === 10) {
-    sendMessage()
+    sendInput()
   }
 })
 
-sendButton.addEventListener('click', sendMessage)
+sendButton.addEventListener('click', sendInput)
 
 // var presence = channel.presence()
 
@@ -76,6 +86,17 @@ channel.on('presence_diff', function (payload) {
     })
 })
 
+// var pingCount = 0
+// function sendLoop() {
+//   return requestAnimationFrame(function(){
+//     console.log(`pingCount`, pingCount)
+//     sendMessage("ping-" + (++pingCount)) 
+//     if (pingCount < 10) {
+//       sendLoop()
+//     }
+//   })
+// }
+// sendLoop()
 
 
 try { bodyInput.focus() } catch (_) { }
